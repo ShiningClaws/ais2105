@@ -20,6 +20,11 @@ RUN apt install -y ros-humble-moveit
 RUN apt install -y ros-humble-ur
 RUN apt install -y gazebo
 
+# Enable mixin
+RUN apt install -y python3-colcon-mixin
+RUN colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && \
+    colcon mixin update default
+
 # ROS2 Configurations
 RUN rosdep update
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
@@ -33,8 +38,14 @@ WORKDIR $THIRD_PARTY_WS
 RUN --mount=type=ssh git clone -b humble git@github.com:UniversalRobots/Universal_Robots_ROS2_Gazebo_Simulation.git $THIRD_PARTY_WS/src/Universal_Robots_ROS2_Gazebo_Simulation
 RUN --mount=type=ssh git clone -b ros2 git@github.com:ros/urdf_tutorial.git $THIRD_PARTY_WS/src/urdf_tutorial
 
-RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y 
-RUN . /opt/ros/humble/setup.sh && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y
+
+# remove '--executor sequential' to enable multi-threading compilation
+# or replace with --parallel-workers NUMBER
+# where number is amount of threads used
+# '--executor sequential is set by default to assure that it will build on computers
+# with different specifications.  
+RUN . /opt/ros/humble/setup.sh && colcon build --executor sequential --symlink-install --mixin rel-with-deb-info compile-commands --cmake-args -DCMAKE_BUILD_TYPE=Release
 RUN echo "source $THIRD_PARTY_WS/install/setup.bash" >> ~/.bashrc
 
 # Set up main workspace
